@@ -1477,3 +1477,44 @@
 * Improved censorship resistance of webtunnel bridges.
 * Updated translations.
 * Fixes and optimizations.
+
+**InviZible Pro beta 2.6.7**
+* Updated Tor to version 4.9.6.
+* Updated Tor obfuscators: Lyrebird, SnowFlake, Conjure.
+* Fixes and optimizations.
+
+**InviZible Pro beta 2.6.8**
+* Updated Purple I2P to version 2.60.0.
+* Added unicode support in DNSCrypt rules.
+* Reduced startup time after restarting the phone.
+
+**InviZible Pro beta 2.6.9**
+* Updated Tor to version 4.9.8.
+
+**InviZible Pro beta 2.7.0**
+* Updated DNSCrypt to version 2.1.16.
+* Added support for DNSTT Tor bridges.
+
+**InviZible Pro beta 2.7.1**
+* Updated Tor to version 4.9.9.
+* Updated Tor Snowflake obfuscator.
+* Updated Tor geoip.
+* Fixed using DNSTT bridges with plaintext DNS resolvers.
+* Added Vietnamese translation.
+* Updated Indonesian, Spanish, Tamil and German translations.
+
+**InviZible Pro beta 2.7.2**
+* Updated Tor to version 4.9.11.
+* Updated Tor Snowflake obfuscator to version 2.14.0.
+* Updated Tor default bridges.
+* Fixes and optimizations.
+
+**InviZible Pro stable 7.5.0**
+* Updated DNSCrypt to version 2.1.16.
+* Updated Tor to version 4.9.11.
+* Updated Purple I2P to version 2.60.0.
+* Updated Tor obfuscators.
+* Added support for DNSTT Tor bridges.
+* Reduced startup time after restarting the phone.
+* Updated translations.
+* Fixes and optimizations.

@@ -12,7 +12,7 @@ def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 android {
-    compileSdkVersion 36
+    compileSdkVersion 37
 
     namespace 'pan.alexander.tordnscrypt'
 
@@ -37,7 +37,7 @@ android {
     productFlavors {
         lite {
             applicationId "pan.alexander.tordnscrypt.stable"
-            versionName "7.4.0"
+            versionName "7.5.0"
             dimension = 'version'
             signingConfig signingConfigs.stablesign
             resValue 'string', 'package_name', applicationId
@@ -47,7 +47,7 @@ android {
 
         pro {
             applicationId "pan.alexander.tordnscrypt.stable"
-            versionName "7.4.0"
+            versionName "7.5.0"
             dimension = 'version'
             signingConfig signingConfigs.stablesign
             resValue 'string', 'package_name', applicationId
@@ -57,7 +57,7 @@ android {
 
         beta {
             applicationId "pan.alexander.tordnscrypt"
-            versionName "2.6.6"
+            versionName "2.7.2"
             dimension = 'version'
             signingConfig signingConfigs.betasign
             resValue 'string', 'package_name', applicationId
@@ -68,7 +68,7 @@ android {
         google_play {
             minSdkVersion 22
             applicationId "pan.alexander.tordnscrypt.gp"
-            versionName "7.4.0"
+            versionName "7.5.0"
             dimension = 'version'
             signingConfig signingConfigs.stablesign
             resValue 'string', 'package_name', applicationId
@@ -110,9 +110,9 @@ android {
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 36
-        versionCode 266
+        versionCode 272
 
-        resourceConfigurations += ['en', 'ru', 'pl', 'de', 'fa', 'fi', 'in', 'fr', 'ja', 'zh', 'es', 'pt', 'pt-rBR', 'el', 'tr', 'it', 'uk', 'bg', 'ar', 'nl', 'ta']
+        resourceConfigurations += ['en', 'ru', 'pl', 'de', 'fa', 'fi', 'in', 'fr', 'ja', 'zh', 'es', 'pt', 'pt-rBR', 'el', 'tr', 'it', 'uk', 'bg', 'ar', 'nl', 'ta', 'vi']
 
         externalNativeBuild {
             cmake {
@@ -133,6 +133,7 @@ android {
     buildTypes {
         debug {
             minifyEnabled false
+            //noinspection NotShrinkingResources
             shrinkResources false
             multiDexEnabled = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -170,7 +171,7 @@ android {
 
     packagingOptions {
         jniLibs {
-            keepDebugSymbols += ['*/*/libdnscrypt-proxy.so', '*/*/libobfs4proxy.so', '*/*/libsnowflake.so', '*/*/libconjure.so', '*/*/libwebtunnel.so']
+            keepDebugSymbols += ['*/*/libdnscrypt-proxy.so', '*/*/libobfs4proxy.so', '*/*/libsnowflake.so', '*/*/libconjure.so', '*/*/libdnstt.so']
         }
         jniLibs.useLegacyPackaging = true
 

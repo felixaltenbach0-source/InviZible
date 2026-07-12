@@ -837,7 +837,9 @@ public class ModulesReceiver extends BroadcastReceiver implements OnInternetConn
             }
 
             private void restartDNSCryptIfRunning() {
-                if (modulesStatus.getDnsCryptState() == RUNNING && isNetworkAvailable()) {
+                if (modulesStatus.getDnsCryptState() == RUNNING
+                        && modulesStatus.isDnsCryptReady()
+                        && isNetworkAvailable()) {
                     logi("Restart DNSCrypt on network DNS change");
                     ModulesRestarter.restartDNSCrypt(context);
                 }

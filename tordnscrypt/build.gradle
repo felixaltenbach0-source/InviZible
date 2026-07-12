@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    compileSdkVersion 36
+    compileSdkVersion 37
 
     namespace 'pan.alexander.tordnscrypt'
 
@@ -18,7 +18,7 @@ android {
 
         fdroid {
             applicationId "pan.alexander.tordnscrypt.stable"
-            versionName "7.4.0"
+            versionName "7.5.0"
             dimension = 'version'
             resValue 'string', 'package_name', applicationId
         }
@@ -58,8 +58,8 @@ android {
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 36
-        versionCode 266
-        resourceConfigurations += ['en', 'ru', 'pl', 'de', 'fa', 'fi', 'in', 'fr', 'ja', 'zh', 'es', 'pt', 'pt-rBR', 'el', 'tr', 'it', 'uk', 'bg', 'ar', 'nl', 'ta']
+        versionCode 272
+        resourceConfigurations += ['en', 'ru', 'pl', 'de', 'fa', 'fi', 'in', 'fr', 'ja', 'zh', 'es', 'pt', 'pt-rBR', 'el', 'tr', 'it', 'uk', 'bg', 'ar', 'nl', 'ta', 'vi']
 
         externalNativeBuild {
             cmake {
@@ -111,7 +111,7 @@ android {
 
     packagingOptions {
         jniLibs {
-            keepDebugSymbols += ['*/*/libdnscrypt-proxy.so', '*/*/libobfs4proxy.so', '*/*/libsnowflake.so', '*/*/libconjure.so', '*/*/libwebtunnel.so']
+            keepDebugSymbols += ['*/*/libdnscrypt-proxy.so', '*/*/libobfs4proxy.so', '*/*/libsnowflake.so', '*/*/libconjure.so', '*/*/libdnstt.so']
         }
         jniLibs.useLegacyPackaging = true
 
