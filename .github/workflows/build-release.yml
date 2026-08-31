@@ -77,8 +77,8 @@ jobs:
             chmod +x tordnscrypt/libs/arm64-v8a/libvanguards.so 2>/dev/null || true
             chmod +x tordnscrypt/libs/armeabi-v7a/libvanguards.so 2>/dev/null || true
             echo "Vanguards binaries staged for packaging:"
-            ls -la tordnscrypt/libs/arm64-v8a/libvanguards.so 2>/dev/null
-            ls -la tordnscrypt/libs/armeabi-v7a/libvanguards.so 2>/dev/null
+            ls -la tordnscrypt/libs/arm64-v8a/libvanguards.so 2>/dev/null || true
+            ls -la tordnscrypt/libs/armeabi-v7a/libvanguards.so 2>/dev/null || true
           else
             echo "::warning::No vanguards binary available — vanguards module will not be included"
           fi
