@@ -1,6 +1,7 @@
 name: Build Native Libraries
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 jobs:

@@ -1,6 +1,8 @@
 name: Build and Release APK
 
 on:
+  push:
+    branches: [master]
   workflow_dispatch:
     inputs:
       prerelease:
@@ -15,9 +17,12 @@ jobs:
     with:
       ref: ''
 
+  native-libs-build:
+    uses: ./.github/workflows/build-native-libs.yml
+
   build:
     runs-on: ubuntu-latest
-    needs: vanguards-build
+    needs: [vanguards-build, native-libs-build]
     permissions:
       contents: write
 
@@ -47,11 +52,12 @@ jobs:
         run: chmod +x gradlew
 
       - name: Download freshly built vanguards binaries
-        if: ${{ needs.vanguards-build.outputs.binaries-ready == 'true' }}
         uses: actions/download-artifact@v4
         with:
-          name: vanguards-binaries
+          pattern: vanguards-*
           path: vanguards-built
+          merge-multiple: true
+          if-no-files-found: ignore
 
       - name: Copy vanguards binaries to JNI libs
         run: |
@@ -84,6 +90,31 @@ jobs:
           else
             echo "::warning::No vanguards binary available — vanguards module will not be included"
           fi
+
+      - name: Download freshly built native libraries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-libs-*
+          path: native-libs
+          merge-multiple: true
+
+      - name: Stage native libraries into JNI libs
+        run: |
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            mkdir -p "tordnscrypt/libs/$abi"
+            if ls native-libs/$abi/*.so >/dev/null 2>&1; then
+              cp native-libs/$abi/*.so "tordnscrypt/libs/$abi/"
+              echo "Using freshly built native libs for $abi:"
+              ls -la "tordnscrypt/libs/$abi/" | head -20
+            else
+              echo "::warning::No fresh native libs for $abi; keeping checked-in binaries"
+            fi
+          done
+          echo "=== Final JNI lib layout ==="
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            echo "--- $abi ---"
+            ls tordnscrypt/libs/$abi/ 2>/dev/null || true
+          done
 
       - name: Configure release signing
         env:

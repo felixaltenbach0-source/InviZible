@@ -1,18 +1,20 @@
 name: Build Vanguards Binaries
 
 # Reusable workflow: builds a statically-linked, standalone vanguards binary
-# (compiled with Nuitka) for the arm64 (aarch64) ABI using an arm64 Python
-# container emulated via QEMU binfmt. Nuitka needs to execute the target
-# interpreter, so the build runs inside an ARM container.
+# (compiled with Nuitka) for the ARM ABIs. The executable is packaged as
+# libvanguards.so and launched by the app as a subprocess (see
+# ModulesStarterHelper#getVanguardsStarterRunnable), so Nuitka must run on the
+# target architecture (there is no turnkey host-side Android cross-compile).
+# Each ABI is built inside a matching target-arch container via QEMU binfmt.
 #
-# NOTE: Only arm64 is built here. The armv7a (32-bit ARM) vanguards is not
-# available: Docker Hub has discontinued linux/arm/v7 manifests for the
-# official python base image, and the checked-in vanguards.bin is arm64-only,
-# so the armv7a APK never bundles vanguards (see build-release.yml).
+# ARM64:  official arm64v8/python image (proven).
+# ARMv7a: arm32v7/debian + python3 from apt, because Docker Hub has dropped the
+#         linux/arm/v7 manifest for the official python base images.
 #
-# The Nuitka build is best-effort: if it fails, this workflow still succeeds
-# and reports binaries-ready=false so the caller falls back to the checked-in
-# arm64 vanguards.bin. As a reusable workflow it must not fail the release job.
+# The build is best-effort: if an ABI fails, this workflow still succeeds and
+# simply omits that artifact, so the caller falls back to the checked-in
+# vanguards.bin (arm64-only). As a reusable workflow it must never fail the
+# release job.
 
 on:
   workflow_call:
@@ -22,17 +24,34 @@ on:
         required: false
         type: string
         default: ''
-    outputs:
-      binaries-ready:
-        description: 'Whether the arm64 vanguards binary was produced'
-        value: ${{ jobs.build.outputs.binaries-ready }}
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      binaries-ready: ${{ steps.stage.outputs.binaries-ready }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64
+            container: arm64v8/python:3.9-slim
+            platform: linux/arm64
+            output: vanguards-arm64.bin
+            setup: |
+              apt-get update
+              apt-get install -y --no-install-recommends gcc
+              pip install --upgrade pip nuitka stem==1.8.0
+            pybin: python
+          - abi: armv7a
+            container: arm32v7/debian:bookworm-slim
+            platform: linux/arm/v7
+            output: vanguards-armv7a.bin
+            setup: |
+              apt-get update
+              apt-get install -y --no-install-recommends python3 python3-pip python3-venv gcc
+              python3 -m venv /opt/venv
+              /opt/venv/bin/pip install --upgrade pip nuitka stem==1.8.0
+            pybin: /opt/venv/bin/python
 
     steps:
       - name: Checkout vanguards submodule
@@ -48,44 +67,41 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build vanguards with Nuitka for arm64
+      - name: Build vanguards with Nuitka for ${{ matrix.abi }}
         continue-on-error: true
         run: |
           mkdir -p out
-          docker run --rm --platform linux/arm64 \
+          docker run --rm --platform ${{ matrix.platform }} \
             -v "$PWD/vanguards:/build/vanguards" \
             -v "$PWD/out:/build/out" \
-            arm64v8/python:3.9-slim /bin/sh -c '
+            ${{ matrix.container }} /bin/sh -c '
               set -e
-              pip install --upgrade pip nuitka stem==1.8.0
-              cd /build/vanguards
-              python -m nuitka \
+              '"${{ matrix.setup }}"'
+              ${{ matrix.pybin }} -m nuitka \
                 --standalone \
                 --onefile \
                 --assume-yes-for-downloads \
                 --include-package=stem \
                 --include-package=vanguards \
-                --output-filename=/build/out/vanguards-arm64.bin \
-                src/vanguards.py
+                --output-filename=/build/out/${{ matrix.output }} \
+                /build/vanguards/src/vanguards.py
             '
 
       - name: Stage binaries for APK packaging
         id: stage
         run: |
           mkdir -p staged
-          if [ -f out/vanguards-arm64.bin ]; then
-            cp out/vanguards-arm64.bin staged/vanguards-arm64.bin
-            echo "binaries-ready=true" >> "$GITHUB_OUTPUT"
-            echo "arm64 vanguards built fresh by Nuitka"
+          if [ -f "out/${{ matrix.output }}" ]; then
+            cp "out/${{ matrix.output }}" "staged/${{ matrix.output }}"
+            echo "${{ matrix.abi }} vanguards built fresh by Nuitka"
           else
-            echo "binaries-ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Nuitka arm64 build did not produce a binary; build-release.yml will fall back to the checked-in vanguards.bin."
+            echo "::warning::${{ matrix.abi }} Nuitka build did not produce a binary"
           fi
           ls -la staged/ 2>/dev/null || true
 
-      - name: Upload staged binaries
+      - name: Upload ${{ matrix.abi }} binaries
         uses: actions/upload-artifact@v4
         with:
-          name: vanguards-binaries
+          name: vanguards-${{ matrix.abi }}
           path: staged/
           if-no-files-found: ignore
