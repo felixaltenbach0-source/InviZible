@@ -68,6 +68,7 @@ public class PathVars {
     private final String webTunnelPath;
     private final String dnsttPath;
     private final String nflogPath;
+    private final String vanguardsPath;
     private final boolean bbOK;
     private volatile int appUid = -1;
     private volatile String appUidStr = "";
@@ -97,6 +98,7 @@ public class PathVars {
         webTunnelPath = nativeLibPath + "/libwebtunnel.so";
         dnsttPath = nativeLibPath + "/libdnstt.so";
         nflogPath = nativeLibPath + "/libnflog.so";
+        vanguardsPath = nativeLibPath + "/libvanguards.so";
     }
 
     public String getDefaultBackupPath() {
@@ -238,6 +240,14 @@ public class PathVars {
 
     public String getNflogPath() {
         return nflogPath;
+    }
+
+    public String getVanguardsPath() {
+        return vanguardsPath;
+    }
+
+    public String getVanguardsConfPath() {
+        return appDataDir + "/app_data/vanguards/vanguards.conf";
     }
 
     public String getTorVirtAdrNet() {

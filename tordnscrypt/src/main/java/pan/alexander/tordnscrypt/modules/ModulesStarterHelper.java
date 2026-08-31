@@ -32,6 +32,7 @@ import com.jrummyapps.android.shell.CommandResult;
 import com.jrummyapps.android.shell.Shell;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -114,6 +115,7 @@ public class ModulesStarterHelper {
     private final String torConfPath;
     private final String obfsPath;
     private final String itpdPath;
+    private final String vanguardsPath;
 
     private final ModulesStatus modulesStatus;
 
@@ -131,6 +133,7 @@ public class ModulesStarterHelper {
         torConfPath = pathVars.getTorConfPath();
         obfsPath = pathVars.getObfsPath();
         itpdPath = pathVars.getITPDPath();
+        vanguardsPath = pathVars.getVanguardsPath();
         this.modulesStatus = ModulesStatus.getInstance();
         lock = new ReentrantLock();
     }
@@ -450,6 +453,59 @@ public class ModulesStarterHelper {
 
                     sendResultIntent(I2PD_RUN_FRAGMENT_MARK, ITPD_KEYWORD, "");
                 }
+            }
+
+            Thread.currentThread().interrupt();
+        };
+    }
+
+    Runnable getVanguardsStarterRunnable() {
+        return () -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                return;
+            }
+
+            File vanguardsBin = new File(vanguardsPath);
+            if (!vanguardsBin.exists()) {
+                logi("Vanguards binary not found at " + vanguardsPath + ", skipping");
+                return;
+            }
+
+            String vanguardsConfPath = pathVars.getVanguardsConfPath();
+            File vanguardsConf = new File(vanguardsConfPath);
+            if (!vanguardsConf.exists()) {
+                logw("Vanguards config not found at " + vanguardsConfPath + ", skipping");
+                return;
+            }
+
+            String vanguardsCmd = vanguardsPath
+                    + " --config " + vanguardsConfPath
+                    + " --loglevel NOTICE";
+
+            logi("Starting Vanguards: " + vanguardsCmd);
+
+            try {
+                final CommandResult shellResult;
+                if (modulesStatus.isUseModulesWithRoot()) {
+                    shellResult = Shell.SU.run(
+                            busyboxPath + "nohup " + vanguardsCmd + " >/dev/null 2>&1 &"
+                    );
+                } else {
+                    shellResult = new ProcessStarter(
+                            context.getApplicationInfo().nativeLibraryDir
+                    ).startProcess(vanguardsCmd);
+                }
+
+                if (!shellResult.isSuccessful()) {
+                    logw("Vanguards exited: " + shellResult.exitCode
+                            + " ERR=" + shellResult.getStderr());
+                }
+            } catch (Exception e) {
+                loge("Vanguards failed to start", e);
             }
 
             Thread.currentThread().interrupt();

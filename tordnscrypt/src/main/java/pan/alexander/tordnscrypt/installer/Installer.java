@@ -172,6 +172,12 @@ public class Installer implements TopFragment.OnActivityChangeListener {
                 throw new IllegalStateException("Installer: MainActivity is null, interrupt installation");
             }
 
+            extractVanguards();
+
+            if (mainActivity == null || mainActivity.isFinishing()) {
+                throw new IllegalStateException("Installer: MainActivity is null, interrupt installation");
+            }
+
             chmodExtractedDirs();
 
             if (mainActivity == null || mainActivity.isFinishing()) {
@@ -303,6 +309,13 @@ public class Installer implements TopFragment.OnActivityChangeListener {
         }
 
         logi("Installer: extractITPD OK");
+    }
+
+    protected void extractVanguards() throws Exception {
+        Command command = new VanguardsExtractCommand(activity, appDataDir);
+        command.execute();
+
+        logi("Installer: extractVanguards OK");
     }
 
     protected void savePreferencesModulesInstalled(boolean installed) {

@@ -8,8 +8,14 @@ on:
     branches: [ main, master ]
 
 jobs:
+  vanguards-build:
+    uses: ./.github/workflows/build-vanguards.yml
+    with:
+      ref: ''
+
   build:
     runs-on: ubuntu-latest
+    needs: vanguards-build
     permissions:
       contents: write
 
@@ -38,6 +44,45 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Download freshly built vanguards binaries
+        if: ${{ needs.vanguards-build.outputs.binaries-ready == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: vanguards-binaries
+          path: vanguards-built
+
+      - name: Copy vanguards binaries to JNI libs
+        run: |
+          mkdir -p tordnscrypt/libs/arm64-v8a tordnscrypt/libs/armeabi-v7a
+
+          # Prefer freshly Nuitka-built binaries, fall back to checked-in vanguards.bin.
+          if [ -f vanguards-built/vanguards-arm64.bin ]; then
+            cp vanguards-built/vanguards-arm64.bin tordnscrypt/libs/arm64-v8a/libvanguards.so
+            echo "Using freshly built arm64 vanguards"
+          elif [ -f vanguards.bin ]; then
+            cp vanguards.bin tordnscrypt/libs/arm64-v8a/libvanguards.so
+            echo "Using checked-in arm64 vanguards.bin"
+          fi
+
+          if [ -f vanguards-built/vanguards-armv7a.bin ]; then
+            cp vanguards-built/vanguards-armv7a.bin tordnscrypt/libs/armeabi-v7a/libvanguards.so
+            echo "Using freshly built armv7a vanguards"
+          else
+            # The checked-in vanguards.bin is arm64-only, so it is never
+            # packaged into the 32-bit (armv7a) APK.
+            echo "No armv7a vanguards binary available"
+          fi
+
+          if [ -f tordnscrypt/libs/arm64-v8a/libvanguards.so ] || [ -f tordnscrypt/libs/armeabi-v7a/libvanguards.so ]; then
+            chmod +x tordnscrypt/libs/arm64-v8a/libvanguards.so 2>/dev/null || true
+            chmod +x tordnscrypt/libs/armeabi-v7a/libvanguards.so 2>/dev/null || true
+            echo "Vanguards binaries staged for packaging:"
+            ls -la tordnscrypt/libs/arm64-v8a/libvanguards.so 2>/dev/null
+            ls -la tordnscrypt/libs/armeabi-v7a/libvanguards.so 2>/dev/null
+          else
+            echo "::warning::No vanguards binary available — vanguards module will not be included"
+          fi
+
       - name: Build Universal APK
         run: ./gradlew assembleFdroidUniversalRelease --no-daemon --stacktrace
 
@@ -51,6 +96,7 @@ jobs:
         run: |
           mkdir -p apk-output
           find tordnscrypt/build/outputs/apk -name "*.apk" -exec cp {} apk-output/ \;
+          echo "=== Built APKs ==="
           ls -la apk-output/
 
       - name: Upload APK artifacts

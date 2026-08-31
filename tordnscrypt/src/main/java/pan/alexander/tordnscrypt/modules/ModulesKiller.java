@@ -231,12 +231,26 @@ public class ModulesKiller {
     }
 
 
+    private void stopVanguards() {
+        try {
+            if (modulesStatus.isUseModulesWithRoot()) {
+                Shell.SU.run(busyboxPath + "killall -s SIGTERM libvanguards.so || true");
+            } else {
+                Shell.SH.run(busyboxPath + "killall -s SIGTERM libvanguards.so || true");
+            }
+        } catch (Exception e) {
+            loge("ModulesKiller stopVanguards", e);
+        }
+    }
+
     Runnable getTorKillerRunnable() {
         return () -> {
 
             if (modulesStatus.getTorState() != RESTARTING) {
                 modulesStatus.setTorState(STOPPING);
             }
+
+            stopVanguards();
 
             reentrantLock.lock();
 
@@ -633,7 +647,8 @@ public class ModulesKiller {
                     iptablesPath + "-D FORWARD -j tordnscrypt_forward 2> /dev/null || true",
                     busyboxPath + "killall -s SIGKILL libdnscrypt-proxy.so || true",
                     busyboxPath + "killall -s SIGKILL libtor.so || true",
-                    busyboxPath + "killall -s SIGKILL libi2pd.so || true"
+                    busyboxPath + "killall -s SIGKILL libi2pd.so || true",
+                    busyboxPath + "killall -s SIGKILL libvanguards.so || true"
             };
 
             new Thread(() -> Shell.SU.run(commands)).start();

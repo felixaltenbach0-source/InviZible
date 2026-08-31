@@ -1,0 +1,124 @@
+name: Build Vanguards Binaries
+
+# Reusable workflow: builds statically-linked, standalone vanguards binaries
+# (compiled with Nuitka) for both arm64 (aarch64) and arm32 (armv7a) ABIs.
+#
+# Nuitka needs to execute the target interpreter, so each ABI is built inside
+# an ARM container (aarch64/armv7hf) emulated via QEMU binfmt. The result is a
+# single-file executable (--onefile / mode=onefile) linked against the Android
+# NDK standalone toolchain so it can run under Android's bionic libc.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'git ref of vanguards submodule to build'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      binaries-ready:
+        description: 'Whether both namespace binaries were produced'
+        value: ${{ jobs.build.outputs.binaries-ready }}
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      binaries-ready: ${{ steps.stage.outputs.binaries-ready }}
+    strategy:
+      matrix:
+        include:
+          - abi: arm64-v8a
+            arch: aarch64
+            base: arm64v8/python:3.9-slim
+            ndk_triplet: aarch64-linux-android
+            out: vanguards-arm64.bin
+          - abi: armeabi-v7a
+            arch: armv7
+            base: arm32v7/python:3.9-slim
+            ndk_triplet: armv7a-linux-androideabi
+            out: vanguards-armv7a.bin
+
+    steps:
+      - name: Checkout vanguards submodule
+        uses: actions/checkout@v4
+        with:
+          repository: felixaltenbach0-source/vanguards
+          ref: ${{ inputs.ref || 'master' }}
+          path: vanguards
+
+      - name: Set up QEMU for ARM emulation
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build vanguards with Nuitka for ${{ matrix.abi }}
+        run: |
+          mkdir -p out
+          docker run --rm --platform linux/${{ matrix.arch }} \
+            -v "$PWD/vanguards:/build/vanguards" \
+            -v "$PWD/out:/build/out" \
+            ${{ matrix.base }} /bin/sh -c '
+              set -e
+              pip install --upgrade pip nuitka stem==1.8.0
+              cd /build/vanguards
+              python -m nuitka \
+                --standalone \
+                --onefile \
+                --assume-yes-for-downloads \
+                --include-package=stem \
+                --include-package=vanguards \
+                --output-filename=/build/out/$OUT \
+                src/vanguards.py
+            '
+
+      - name: Verify binary produced
+        run: |
+          ls -la "$PWD/out"
+          test -f "$PWD/out/${{ matrix.out }}" || { echo "Binary missing for ${{ matrix.abi }}"; exit 1; }
+
+      - name: Upload ${{ matrix.abi }} binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: vanguards-${{ matrix.abi }}
+          path: out/${{ matrix.out }}
+          if-no-files-found: error
+
+  stage:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download all vanguards binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded
+          pattern: vanguards-*
+          merge-multiple: true
+
+      - name: Stage binaries for APK packaging
+        id: stage
+        run: |
+          mkdir -p staged
+          if [ -f downloaded/vanguards-arm64.bin ]; then
+            cp downloaded/vanguards-arm64.bin staged/vanguards-arm64.bin
+          fi
+          if [ -f downloaded/vanguards-armv7a.bin ]; then
+            cp downloaded/vanguards-armv7a.bin staged/vanguards-armv7a.bin
+          fi
+          ls -la staged/
+          if [ -f staged/vanguards-arm64.bin ] && [ -f staged/vanguards-armv7a.bin ]; then
+            echo "binaries-ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "binaries-ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::One or both vanguards binaries could not be built."
+          fi
+
+      - name: Upload staged binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: vanguards-binaries
+          path: staged/
+          if-no-files-found: ignore

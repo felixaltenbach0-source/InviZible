@@ -451,6 +451,16 @@ public class ModulesService extends Service {
                 }
                 torThread.start();
 
+                Thread vanguardsThread = new Thread(modulesStarterHelper.getVanguardsStarterRunnable());
+                vanguardsThread.setName("VanguardsThread");
+                vanguardsThread.setDaemon(false);
+                try {
+                    vanguardsThread.setPriority(Thread.NORM_PRIORITY);
+                } catch (SecurityException e) {
+                    loge("ModulesService startVanguards", e);
+                }
+                vanguardsThread.start();
+
                 changeTorStatus(torThread);
             } catch (Exception e) {
                 loge("Tor was unable to startRefreshModulesStatus:", e);
