@@ -80,14 +80,14 @@ android {
     signingConfigs {
         def keystoreFile = System.getenv('KEYSTORE_FILE')
         def keystorePassword = System.getenv('KEYSTORE_PASSWORD')
-        def keyAlias = System.getenv('KEY_ALIAS')
-        def keyPassword = System.getenv('KEY_PASSWORD')
+        def keyAliasName = System.getenv('KEY_ALIAS')
+        def keyPasswordVal = System.getenv('KEY_PASSWORD')
         release {
-            if (keystoreFile && keystorePassword && keyAlias && keyPassword) {
+            if (keystoreFile && keystorePassword && keyAliasName && keyPasswordVal) {
                 storeFile file(keystoreFile)
                 storePassword keystorePassword
-                keyAlias keyAlias
-                keyPassword keyPassword
+                keyAlias keyAliasName
+                keyPassword keyPasswordVal
             }
         }
     }
