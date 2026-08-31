@@ -77,11 +77,29 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    signingConfigs {
+        def keystoreFile = System.getenv('KEYSTORE_FILE')
+        def keystorePassword = System.getenv('KEYSTORE_PASSWORD')
+        def keyAlias = System.getenv('KEY_ALIAS')
+        def keyPassword = System.getenv('KEY_PASSWORD')
+        release {
+            if (keystoreFile && keystorePassword && keyAlias && keyPassword) {
+                storeFile file(keystoreFile)
+                storePassword keystorePassword
+                keyAlias keyAlias
+                keyPassword keyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (System.getenv('KEYSTORE_FILE')) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

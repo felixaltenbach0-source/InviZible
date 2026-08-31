@@ -83,6 +83,18 @@ jobs:
             echo "::warning::No vanguards binary available — vanguards module will not be included"
           fi
 
+      - name: Configure release signing
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        run: |
+          mkdir -p .keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > .keystore/release.jks
+          chmod 600 .keystore/release.jks
+          echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/.keystore/release.jks" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "Release signing configured from GitHub secrets."
+
       - name: Build Universal APK
         run: ./gradlew assembleFdroidUniversalRelease --no-daemon --stacktrace
 
