@@ -79,6 +79,18 @@
             android:summary="@string/pref_tor_reduced_connections_padding_summ"
             android:title="@string/pref_tor_reduced_connections_padding" />
         <CheckBoxPreference
+            android:id="@+id/pref_tor_circuit_padding"
+            android:defaultValue="true"
+            android:key="CircuitPadding"
+            android:summary="@string/pref_tor_circuit_padding_summ"
+            android:title="@string/pref_tor_circuit_padding" />
+        <CheckBoxPreference
+            android:id="@+id/pref_tor_reduced_circuit_padding"
+            android:defaultValue="true"
+            android:key="ReducedCircuitPadding"
+            android:summary="@string/pref_tor_reduced_circuit_padding_summ"
+            android:title="@string/pref_tor_reduced_circuit_padding" />
+        <CheckBoxPreference
             android:id="@+id/pref_tor_fascist_firewall"
             android:defaultValue="false"
             android:key="FascistFirewall"
@@ -148,13 +160,13 @@
             android:title="@string/pref_tor_isolate_uid" />
         <SwitchPreference
             android:id="@+id/pref_tor_isolate_dest_address"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="pref_tor_isolate_dest_address"
             android:summary="@string/pref_tor_isolate_dest_address_summ"
             android:title="@string/pref_tor_isolate_dest_address" />
         <SwitchPreference
             android:id="@+id/pref_tor_isolate_dest_port"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="pref_tor_isolate_dest_port"
             android:summary="@string/pref_tor_isolate_dest_port_summ"
             android:title="@string/pref_tor_isolate_dest_port" />

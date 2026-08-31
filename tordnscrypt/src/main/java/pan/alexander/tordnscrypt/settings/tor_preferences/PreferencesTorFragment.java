@@ -156,6 +156,8 @@ public class PreferencesTorFragment extends PreferenceFragmentCompat implements 
         preferences.add(findPreference("AvoidDiskWrites"));
         preferences.add(findPreference("ConnectionPadding"));
         preferences.add(findPreference("ReducedConnectionPadding"));
+        preferences.add(findPreference("CircuitPadding"));
+        preferences.add(findPreference("ReducedCircuitPadding"));
         preferences.add(findPreference("ExcludeExitNodes"));
         preferences.add(findPreference("ExitNodes"));
         preferences.add(findPreference("ExcludeNodes"));
@@ -589,6 +591,7 @@ public class PreferencesTorFragment extends PreferenceFragmentCompat implements 
                     case "SOCKSPort" -> "SOCKSPort";
                     case "HTTPTunnelPort" -> "HTTPTunnelPort";
                     case "TransPort" -> "TransPort";
+                    case "DNSPort" -> "DNSPort";
                     default -> "";
                 };
 
@@ -635,6 +638,7 @@ public class PreferencesTorFragment extends PreferenceFragmentCompat implements 
                     case "SOCKSPort" -> "SOCKSPort";
                     case "HTTPTunnelPort" -> "HTTPTunnelPort";
                     case "TransPort" -> "TransPort";
+                    case "DNSPort" -> "DNSPort";
                     default -> "";
                 };
 
@@ -926,6 +930,8 @@ public class PreferencesTorFragment extends PreferenceFragmentCompat implements 
             preferences.add(findPreference("AvoidDiskWrites"));
             preferences.add(findPreference("ConnectionPadding"));
             preferences.add(findPreference("ReducedConnectionPadding"));
+            preferences.add(findPreference("CircuitPadding"));
+            preferences.add(findPreference("ReducedCircuitPadding"));
 
             for (Preference preference : preferences) {
                 if (preference != null) {

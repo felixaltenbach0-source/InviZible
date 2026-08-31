@@ -372,6 +372,10 @@
     <string name="pref_tor_connections_padding_summ">This option governs Tor’s use of padding to defend against some forms of traffic analysis. Disable to save bandwidth.</string>
     <string name="pref_tor_reduced_connections_padding" translatable="false">Reduced Connection Padding</string>
     <string name="pref_tor_reduced_connections_padding_summ">If set enabled, Tor will not hold OR connections open for very long, and will send less padding on these connections. Enable to save bandwidth.</string>
+    <string name="pref_tor_circuit_padding" translatable="false">Circuit Padding</string>
+    <string name="pref_tor_circuit_padding_summ">If disabled, Tor will not pad client circuits with additional cover traffic to defend against traffic analysis. Disable to save bandwidth.</string>
+    <string name="pref_tor_reduced_circuit_padding" translatable="false">Reduced Circuit Padding</string>
+    <string name="pref_tor_reduced_circuit_padding_summ">If enabled, Tor will only use circuit padding algorithms that have low overhead. Enable to save bandwidth.</string>
     <string name="pref_tor_nodes_categ">Nodes</string>
     <string name="pref_tor_isolation_categ">Isolation settings</string>
     <string name="pref_tor_exclude_exit_nodes" translatable="false">Exclude Exit Nodes</string>
