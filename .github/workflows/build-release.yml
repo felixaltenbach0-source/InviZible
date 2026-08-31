@@ -86,15 +86,23 @@ jobs:
           fi
 
       - name: Configure release signing
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          if [ -z "${KEYSTORE_BASE64}" ]; then
+            echo "::warning::Keystore secrets not configured; APKs will be unsigned."
+            exit 0
+          fi
           mkdir -p .keystore
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > .keystore/release.jks
+          echo "$KEYSTORE_BASE64" | base64 -d > .keystore/release.jks
           chmod 600 .keystore/release.jks
           echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/.keystore/release.jks" >> "$GITHUB_ENV"
-          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
-          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
           echo "Release signing configured from GitHub secrets."
 
       - name: Build Universal APK
