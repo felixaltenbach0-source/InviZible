@@ -174,14 +174,20 @@ jobs:
         id: auto-tag
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          TAG="v${VERSION}-stable"
+          SHORT_SHA="${GITHUB_SHA::8}"
+          # Give every commit its own individual, immutable tag/release so
+          # builds are never collapsed into a single overwritten release.
+          TAG="v${VERSION}-stable-${SHORT_SHA}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Replace any existing tag/release so re-runs are idempotent.
-          git push origin ":refs/tags/$TAG" 2>/dev/null || true
-          GH_TOKEN="${{ github.token }}" gh release delete "$TAG" --repo "${{ github.repository }}" --yes 2>/dev/null || true
-          git tag -f "$TAG" "$GITHUB_SHA"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; skipping re-tag to keep it immutable."
+            GH_TOKEN="${{ github.token }}" gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || \
+              exit 1
+            exit 0
+          fi
+          git tag "$TAG" "$GITHUB_SHA"
           git push origin "$TAG"
           echo "Tagged release: $TAG"
 
@@ -191,10 +197,15 @@ jobs:
         run: |
           TAG="${{ steps.auto-tag.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
+          SHORT_SHA="${GITHUB_SHA::8}"
           PRERELEASE="${{ inputs.prerelease == 'true' && '--prerelease' || '' }}"
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; keeping it immutable. Not overwriting."
+            exit 0
+          fi
           gh release create "$TAG" \
             --repo "${{ github.repository }}" \
-            --title "InviZible $VERSION" \
+            --title "InviZible $VERSION ($SHORT_SHA)" \
             --generate-notes \
             --target "$GITHUB_SHA" \
             $PRERELEASE \
