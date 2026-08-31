@@ -76,9 +76,13 @@ jobs:
             cp vanguards-built/vanguards-armv7a.bin tordnscrypt/libs/armeabi-v7a/libvanguards.so
             echo "Using freshly built armv7a vanguards"
           else
-            # The checked-in vanguards.bin is arm64-only, so it is never
-            # packaged into the 32-bit (armv7a) APK.
             echo "No armv7a vanguards binary available"
+          fi
+
+          if [ -f vanguards-built/vanguards-x86_64.bin ]; then
+            mkdir -p tordnscrypt/libs/x86_64
+            cp vanguards-built/vanguards-x86_64.bin tordnscrypt/libs/x86_64/libvanguards.so
+            echo "Using freshly built x86_64 vanguards"
           fi
 
           if [ -f tordnscrypt/libs/arm64-v8a/libvanguards.so ] || [ -f tordnscrypt/libs/armeabi-v7a/libvanguards.so ]; then

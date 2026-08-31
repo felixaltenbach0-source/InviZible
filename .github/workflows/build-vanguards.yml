@@ -1,19 +1,15 @@
 name: Build Vanguards Binaries
 
-# Reusable workflow: builds a statically-linked, standalone vanguards binary
-# (compiled with Nuitka) for the ARM ABIs. The executable is packaged as
-# libvanguards.so and launched by the app as a subprocess (see
-# ModulesStarterHelper#getVanguardsStarterRunnable), so Nuitka must run on the
-# target architecture (there is no turnkey host-side Android cross-compile).
-# Each ABI is built inside a matching target-arch container via QEMU binfmt.
+# Cross-compiles vanguards (Python) to a standalone Android binary using
+# Nuitka + the Android NDK clang cross-compiler.  The same NDK r23b toolchain
+# used for tor/dnscrypt/i2pd is reused here via CC/LD/AR/RANLIB env vars.
 #
-# ARM64:  official arm64v8/python image (proven).
-# ARMv7a: arm32v7/debian + python3 from apt, because Docker Hub has dropped the
-#         linux/arm/v7 manifest for the official python base images.
+# No QEMU or Docker containers are needed — compilation runs natively on the
+# GitHub Actions x86_64 host while the NDK clang emits ARM/x86_64 Android code.
 #
 # The build is best-effort: if an ABI fails, this workflow still succeeds and
 # simply omits that artifact, so the caller falls back to the checked-in
-# vanguards.bin (arm64-only). As a reusable workflow it must never fail the
+# vanguards.bin (arm64-only).  As a reusable workflow it must never fail the
 # release job.
 
 on:
@@ -34,26 +30,28 @@ jobs:
       matrix:
         include:
           - abi: arm64
-            container: arm64v8/python:3.9-slim
-            platform: linux/arm64
-            output: vanguards-arm64.bin
-            setup: |
-              apt-get update
-              apt-get install -y --no-install-recommends gcc
-              pip install --upgrade pip nuitka stem==1.8.0
-            pybin: python
+            ndk_cc: aarch64-linux-android21-clang
+            ndk_cxx: aarch64-linux-android21-clang++
+            ndk_target: aarch64-linux-android
+            ndk_api: '21'
           - abi: armv7a
-            container: arm32v7/debian:bookworm-slim
-            platform: linux/arm/v7
-            output: vanguards-armv7a.bin
-            setup: |
-              apt-get update
-              apt-get install -y --no-install-recommends python3 python3-pip python3-venv gcc
-              python3 -m venv /opt/venv
-              /opt/venv/bin/pip install --upgrade pip nuitka stem==1.8.0
-            pybin: /opt/venv/bin/python
+            ndk_cc: armv7a-linux-androideabi16-clang
+            ndk_cxx: armv7a-linux-androideabi16-clang++
+            ndk_target: armv7a-linux-androideabi
+            ndk_api: '16'
+          - abi: x86_64
+            ndk_cc: x86_64-linux-android21-clang
+            ndk_cxx: x86_64-linux-android21-clang++
+            ndk_target: x86_64-linux-android
+            ndk_api: '21'
 
     steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 1
+
       - name: Checkout vanguards submodule
         uses: actions/checkout@v4
         with:
@@ -61,39 +59,70 @@ jobs:
           ref: ${{ inputs.ref || 'master' }}
           path: vanguards
 
-      - name: Set up QEMU for ARM emulation
-        uses: docker/setup-qemu-action@v3
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Install Python build dependencies
+        run: pip install --upgrade pip nuitka ordered-set zstandard stem==1.8.0
 
-      - name: Build vanguards with Nuitka for ${{ matrix.abi }}
+      - name: Install Android NDK r23b
+        run: |
+          sudo mkdir -p /opt/android-sdk/ndk
+          cd /tmp
+          curl --silent -o android-ndk-r23b-linux.zip \
+            https://dl.google.com/android/repository/android-ndk-r23b-linux.zip
+          echo "f47ec4c4badd11e9f593a8450180884a927c330d  android-ndk-r23b-linux.zip" > sha1.txt
+          sha1sum -c sha1.txt
+          unzip -q android-ndk-r23b-linux.zip
+          sudo mv android-ndk-r23b /opt/android-sdk/ndk/23.1.7779620
+
+      - name: Build vanguards with NDK cross-compiler for ${{ matrix.abi }}
         continue-on-error: true
         run: |
+          NDK=/opt/android-sdk/ndk/23.1.7779620
+          TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
+
+          export CC="$TOOLCHAIN/bin/${{ matrix.ndk_cc }}"
+          export CXX="$TOOLCHAIN/bin/${{ matrix.ndk_cxx }}"
+          export LD="$TOOLCHAIN/bin/${{ matrix.ndk_cc }}"
+          export AR="$TOOLCHAIN/bin/llvm-ar"
+          export RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
+          export STRIP="$TOOLCHAIN/bin/llvm-strip"
+
+          export CCFLAGS="--target=${{ matrix.ndk_target }}${{ matrix.ndk_api }} -fPIC"
+          export LDFLAGS="--target=${{ matrix.ndk_target }}${{ matrix.ndk_api }} -static-libstdc++ -llog"
+
+          echo "CC=$CC"
+          echo "LD=$LD"
+          echo "AR=$AR"
+          $CC --version
+
           mkdir -p out
-          docker run --rm --platform ${{ matrix.platform }} \
-            -v "$PWD/vanguards:/build/vanguards" \
-            -v "$PWD/out:/build/out" \
-            ${{ matrix.container }} /bin/sh -c '
-              set -e
-              '"${{ matrix.setup }}"'
-              ${{ matrix.pybin }} -m nuitka \
-                --standalone \
-                --onefile \
-                --assume-yes-for-downloads \
-                --include-package=stem \
-                --include-package=vanguards \
-                --output-filename=/build/out/${{ matrix.output }} \
-                /build/vanguards/src/vanguards.py
-            '
+          python -m nuitka \
+            --onefile \
+            --assume-yes-for-downloads \
+            --include-package=stem \
+            --include-package=vanguards \
+            --output-filename="$(pwd)/out/vanguards-${{ matrix.abi }}.bin" \
+            "$(pwd)/vanguards/src/vanguards.py"
+
+      - name: Verify binary
+        run: |
+          if [ -f "out/vanguards-${{ matrix.abi }}.bin" ]; then
+            file "out/vanguards-${{ matrix.abi }}.bin"
+            ls -lh "out/vanguards-${{ matrix.abi }}.bin"
+          else
+            echo "::warning::No binary produced"
+          fi
 
       - name: Stage binaries for APK packaging
-        id: stage
         run: |
           mkdir -p staged
-          if [ -f "out/${{ matrix.output }}" ]; then
-            cp "out/${{ matrix.output }}" "staged/${{ matrix.output }}"
-            echo "${{ matrix.abi }} vanguards built fresh by Nuitka"
+          if [ -f "out/vanguards-${{ matrix.abi }}.bin" ]; then
+            cp "out/vanguards-${{ matrix.abi }}.bin" "staged/vanguards-${{ matrix.abi }}.bin"
+            echo "${{ matrix.abi }} vanguards built fresh by NDK cross-compile"
           else
             echo "::warning::${{ matrix.abi }} Nuitka build did not produce a binary"
           fi
