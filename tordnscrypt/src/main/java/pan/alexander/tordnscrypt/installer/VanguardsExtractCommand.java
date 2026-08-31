@@ -33,10 +33,12 @@ import static pan.alexander.tordnscrypt.utils.logger.Logger.loge;
 import static pan.alexander.tordnscrypt.utils.logger.Logger.logi;
 
 public class VanguardsExtractCommand extends AssetsExtractCommand {
+    private final Context context;
     private final String appDataDir;
 
     public VanguardsExtractCommand(Context context, String appDataDir) {
         super(context);
+        this.context = context;
         this.appDataDir = appDataDir;
     }
 
