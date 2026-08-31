@@ -10,3 +10,6 @@
 [submodule "Nflog-android"]
 	path = Nflog-android
 	url = https://github.com/Gedsh/Nflog-android
+[submodule "vanguards"]
+	path = vanguards
+	url = https://github.com/felixaltenbach0-source/vanguards
