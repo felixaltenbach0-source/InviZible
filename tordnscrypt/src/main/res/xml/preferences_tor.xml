@@ -29,7 +29,7 @@
             android:title="@string/pref_tor_exclude_nodes" />
         <SwitchPreference
             android:id="@+id/pref_tor_entry_nodes"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="EntryNodes"
             android:summary="@string/pref_tor_entry_nodes_summ"
             android:title="@string/pref_tor_entry_nodes" />

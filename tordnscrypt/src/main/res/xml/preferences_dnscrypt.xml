@@ -97,7 +97,7 @@
 
         <SwitchPreference
             android:id="@+id/use_dnscrypt_proxy"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="Enable proxy"
             android:title="@string/pref_dnscrypt_use_proxy" />
         <EditTextPreference
@@ -123,19 +123,19 @@
             android:title="@string/pref_dnscrypt_fallback_resolver" />
         <CheckBoxPreference
             android:id="@+id/ignore_system_dns"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="ignore_system_dns"
             android:summary="@string/pref_dnscrypt_ignore_system_dns_summ"
             android:title="@string/pref_dnscrypt_ignore_system_dns" />
         <CheckBoxPreference
             android:id="@+id/http3"
-            android:defaultValue="true"
+            android:defaultValue="false"
             android:key="http3"
             android:summary="@string/pref_dnscrypt_http3_summ"
             android:title="@string/pref_dnscrypt_http3" />
         <CheckBoxPreference
             android:id="@+id/dns64"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="dns64"
             android:summary="@string/pref_dnscrypt_dns64_summ"
             android:title="@string/pref_dnscrypt_dns64" />

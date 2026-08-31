@@ -8,17 +8,17 @@
 
         <SwitchPreference
             android:id="@+id/swAutostartDNS"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="swAutostartDNS"
             android:title="@string/pref_fast_dns_autostart" />
         <SwitchPreference
             android:id="@+id/swAutostartTor"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="swAutostartTor"
             android:title="@string/pref_fast_tor_autostart" />
         <SwitchPreference
             android:id="@+id/swAutostartITPD"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="swAutostartITPD"
             android:title="@string/pref_fast_itpd_autostart" />
         <EditTextPreference
@@ -44,7 +44,7 @@
         </Preference>
         <SwitchPreference
             android:id="@+id/pref_fast_prevent_dns_leak"
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="pref_fast_prevent_dns_leak"
             android:title="@string/pref_fast_prevent_dns_leak"
             android:summary="@string/pref_fast_prevent_dns_leak_summ" />
