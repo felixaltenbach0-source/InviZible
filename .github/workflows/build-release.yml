@@ -40,14 +40,35 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
 
-      - name: Install Android SDK components (build tools, platforms, NDK, cmake)
+      - name: Install Android SDK build tools & platform
         run: |
+          # Ensure the exact build-tools/platform the app requires are present.
+          # The compileSdk 37 platform is auto-downloaded by AGP if absent, so we
+          # don't pin it here (sdkmanager reports it as a missing package).
           sdkmanager \
             "build-tools;36.0.0" \
-            "platforms;android-36" \
-            "platforms;android-37" \
-            "ndk;23.1.7779620" \
-            "cmake;3.22.1"
+            "platforms;android-36"
+
+      - name: Install Android NDK r23b
+        run: |
+          # The app pins ndkVersion '23.1.7779620'. Install it directly (same
+          # method used by the native-libs/vanguards jobs) so it is guaranteed
+          # present and used by default for the CMake/JNI build.
+          ANDROID_NDK_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}/ndk/23.1.7779620"
+          if [ -d "$ANDROID_NDK_HOME" ]; then
+            echo "NDK 23.1.7779620 already present at $ANDROID_NDK_HOME"
+            exit 0
+          fi
+          sudo mkdir -p "$(dirname "$ANDROID_NDK_HOME")"
+          cd /tmp
+          curl --silent -o android-ndk-r23b-linux.zip \
+            https://dl.google.com/android/repository/android-ndk-r23b-linux.zip
+          echo "f47ec4c4badd11e9f593a8450180884a927c330d  android-ndk-r23b-linux.zip" > sha1.txt
+          sha1sum -c sha1.txt
+          unzip -q android-ndk-r23b-linux.zip
+          sudo mv android-ndk-r23b "$ANDROID_NDK_HOME"
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
+          echo "Installed Android NDK r23b to $ANDROID_NDK_HOME"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
