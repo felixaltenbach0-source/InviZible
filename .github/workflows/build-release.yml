@@ -145,18 +145,19 @@ jobs:
       - name: Configure release signing
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEYSTORE_FILE_PASSWORD: ${{ secrets.KEYSTORE_FILE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           # Generate a brand-new keystore from the secret passwords/alias so the
           # APKs can always be signed regardless of any pre-existing keystore.
           # This avoids the "bad key / not properly padded" errors that occurred
           # when the stored KEYSTORE_BASE64 did not match the passwords.
+          #
+          # Note: JDK 17 keytool creates a PKCS12 keystore by default, which
+          # does NOT support differing store/key passwords (it ignores -keypass
+          # and locks the key to the store password). So we use ONE password for
+          # both the store and the key, and pass the same value to Gradle.
           STORE_PASS="${KEYSTORE_PASSWORD:-changeit}"
-          STORE_FILE_PASS="${KEYSTORE_FILE_PASSWORD:-$STORE_PASS}"
           ALIAS="${KEY_ALIAS:-invizible}"
-          KEY_PASS="${KEY_PASSWORD:-$STORE_PASS}"
           if [ -z "${KEYSTORE_PASSWORD}" ]; then
             echo "::warning::Keystore secrets not configured; generating a throwaway signing keystore."
           fi
@@ -166,8 +167,7 @@ jobs:
           keytool -genkeypair \
             -v \
             -keystore .keystore/release.jks \
-            -storepass "$STORE_FILE_PASS" \
-            -keypass "$KEY_PASS" \
+            -storepass "$STORE_PASS" \
             -alias "$ALIAS" \
             -keyalg RSA \
             -keysize 2048 \
@@ -177,9 +177,9 @@ jobs:
           chmod 600 .keystore/release.jks
 
           echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/.keystore/release.jks" >> "$GITHUB_ENV"
-          echo "KEYSTORE_PASSWORD=$STORE_FILE_PASS" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
           echo "KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
           echo "Release signing keystore generated from GitHub secrets."
 
       - name: Build Universal APK
