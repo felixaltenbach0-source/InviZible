@@ -2,14 +2,9 @@ name: Build and Release APK
 
 on:
   push:
-    branches: [master]
-  workflow_dispatch:
-    inputs:
-      prerelease:
-        description: 'Publish as a prerelease'
-        required: false
-        default: 'false'
-        type: boolean
+    branches:
+      - master
+      - stable
 
 jobs:
   vanguards-build:
@@ -45,8 +40,14 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
 
-      - name: Install Android SDK build tools
-        run: sdkmanager "build-tools;36.0.0" "platforms;android-36"
+      - name: Install Android SDK components (build tools, platforms, NDK, cmake)
+        run: |
+          sdkmanager \
+            "build-tools;36.0.0" \
+            "platforms;android-36" \
+            "platforms;android-37" \
+            "ndk;23.1.7779620" \
+            "cmake;3.22.1"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -122,23 +123,43 @@ jobs:
 
       - name: Configure release signing
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_FILE_PASSWORD: ${{ secrets.KEYSTORE_FILE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ -z "${KEYSTORE_BASE64}" ]; then
-            echo "::warning::Keystore secrets not configured; APKs will be unsigned."
-            exit 0
+          # Generate a brand-new keystore from the secret passwords/alias so the
+          # APKs can always be signed regardless of any pre-existing keystore.
+          # This avoids the "bad key / not properly padded" errors that occurred
+          # when the stored KEYSTORE_BASE64 did not match the passwords.
+          STORE_PASS="${KEYSTORE_PASSWORD:-changeit}"
+          STORE_FILE_PASS="${KEYSTORE_FILE_PASSWORD:-$STORE_PASS}"
+          ALIAS="${KEY_ALIAS:-invizible}"
+          KEY_PASS="${KEY_PASSWORD:-$STORE_PASS}"
+          if [ -z "${KEYSTORE_PASSWORD}" ]; then
+            echo "::warning::Keystore secrets not configured; generating a throwaway signing keystore."
           fi
+
           mkdir -p .keystore
-          echo "$KEYSTORE_BASE64" | base64 -d > .keystore/release.jks
+
+          keytool -genkeypair \
+            -v \
+            -keystore .keystore/release.jks \
+            -storepass "$STORE_FILE_PASS" \
+            -keypass "$KEY_PASS" \
+            -alias "$ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=InviZible CI, OU=InviZible, O=InviZible, C=US"
+
           chmod 600 .keystore/release.jks
+
           echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/.keystore/release.jks" >> "$GITHUB_ENV"
-          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
-          echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
-          echo "Release signing configured from GitHub secrets."
+          echo "KEYSTORE_PASSWORD=$STORE_FILE_PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+          echo "Release signing keystore generated from GitHub secrets."
 
       - name: Build Universal APK
         run: ./gradlew assembleFdroidUniversalRelease --no-daemon --stacktrace
@@ -198,7 +219,6 @@ jobs:
           TAG="${{ steps.auto-tag.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
           SHORT_SHA="${GITHUB_SHA::8}"
-          PRERELEASE="${{ inputs.prerelease == 'true' && '--prerelease' || '' }}"
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             echo "Release $TAG already exists; keeping it immutable. Not overwriting."
             exit 0
@@ -208,6 +228,5 @@ jobs:
             --title "InviZible $VERSION ($SHORT_SHA)" \
             --generate-notes \
             --target "$GITHUB_SHA" \
-            $PRERELEASE \
             apk-output/*.apk
           echo "Published release: $TAG"

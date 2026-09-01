@@ -84,24 +84,32 @@ jobs:
           NDK=/opt/android-sdk/ndk/23.1.7779620
           TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
 
+          # NDK r23b clang binaries already default to the correct target triple
+          # (they are target-prefixed wrappers), so do NOT inject a separate
+          # `--target=` flag into CCFLAGS.  Doing so made Nuitka pass that flag
+          # to the host g++ it uses for the C++ backend, which failed with
+          # "unrecognized command-line option".  Instead pass the full compiler
+          # command (clang with an explicit --target) through CC/CXX so Nuitka
+          # invokes the NDK toolchain consistently.
+          export TARGET_TRIPLE="${{ matrix.ndk_target }}${{ matrix.ndk_api }}"
           export CC="$TOOLCHAIN/bin/${{ matrix.ndk_cc }}"
           export CXX="$TOOLCHAIN/bin/${{ matrix.ndk_cxx }}"
           export LD="$TOOLCHAIN/bin/${{ matrix.ndk_cc }}"
           export AR="$TOOLCHAIN/bin/llvm-ar"
           export RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
           export STRIP="$TOOLCHAIN/bin/llvm-strip"
-
-          export CCFLAGS="--target=${{ matrix.ndk_target }}${{ matrix.ndk_api }} -fPIC"
-          export LDFLAGS="--target=${{ matrix.ndk_target }}${{ matrix.ndk_api }} -static-libstdc++ -llog"
+          export CCFLAGS="-fPIC"
+          export LDFLAGS="-static-libstdc++ -llog"
 
           echo "CC=$CC"
-          echo "LD=$LD"
-          echo "AR=$AR"
+          echo "CXX=$CXX"
           $CC --version
+          $CXX --version
 
           mkdir -p out
           python -m nuitka \
             --onefile \
+            --clang \
             --assume-yes-for-downloads \
             --include-package=stem \
             --include-package=vanguards \
